@@ -247,6 +247,8 @@ const setActiveSection = () => {
       } else ActiveSectionToSet.sections[0].push(sectionBlock)
     })
   })
+
+  ActiveSection.sections = ActiveSection.name.split("-").map(() => [])
   ActiveSection = ActiveSectionToSet
 
   closeConfigureSectionModal()
