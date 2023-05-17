@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Title</title>
+  <link rel="stylesheet" href="./css/main.css">
+</head>
+<body>
+
+  <div id="app">
+    <div class="back" id="back">
+
+    </div>
+    <div class="configure-section-modal" id="configure-section-modal">
+      <div class="modal-header">
+        <h4>Configure Sections</h4>
+
+        <span onclick="closeConfigureSectionModal()" class="close-modal">X</span>
+      </div>
+
+      <div class="modal-container">
+
+        <div class="configure-section-wrap">
+          <div class="configure-section-content" id="configure-section-content">
+
+          </div>
+          <div class="configure-section-submit">
+            <button onclick="setActiveSection()" class="btn">Save Sections Configuration</button>
+            <button onclick="closeConfigureSectionModal()" class="btn">Cancel</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+
+    <div class="header">
+      <button class="btn" onclick="openConfigureSectionModal()">Configure Sections</button>
+      <button class="btn" onclick="toggleWidgetModal()">Add Widget</button>
+      <button class="btn">Cancel Changes</button>
+      <button class="btn btn-blue">Save Changes</button>
+    </div>
+    <div class="container">
+      <div id="main-section" class="main-section">
+
+      </div>
+    </div>
+
+    <div id="widget-modal" class="widget-modal">
+      <div class="widget-modal-header">
+        <h4>Configure Sections</h4>
+
+        <span onclick="toggleWidgetModal()" class="close-modal">X</span>
+      </div>
+      <div class="widget-modal-content" id="widget-modal-content">
+
+      </div>
+    </div>
+  </div>
+
+  <script src="./js/main.js">
+
+  </script>
+</body>
+</html>
