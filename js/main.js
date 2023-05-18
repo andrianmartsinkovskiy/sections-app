@@ -74,6 +74,31 @@ let StartResizeValue = null
 let ActiveResizeValue = 0
 let StartResizeHeight = '0px'
 let ActiveItemToDrag = null
+let ActiveBlockHeaderToDrag = null
+
+
+const removeSectionBlockHelper = (sectionIndex, blockIndex) => {
+
+  if (ActiveSection.sections[sectionIndex].length < 1) return
+  ActiveSection.sections[sectionIndex].splice(blockIndex, 1);
+}
+
+const removeSectionBlock = (e) => {
+  removeSectionBlockHelper(Number(e.target.dataset.sectionIndex), Number(e.target.dataset.blockIndex))
+  buildSections()
+}
+
+const ClearActiveHeaderToDrag = () => {
+  ActiveBlockHeaderToDrag = null
+}
+
+const ClearActiveItemToDrag = () => {
+  ActiveItemToDrag = null
+}
+
+const ClearWidgetToDrag = () => {
+  ActiveWidget = null
+}
 
 const WidgetDiveDragStartListener = e => {
   ActiveWidget = AllWidgets.find(item => item.id === Number(e.target.dataset.id))
@@ -84,7 +109,26 @@ const WidgetActiveItemDragStartListener = e => {
     sectionItem.forEach(sectionBlock => {
       if (Number(e.target.dataset.id) === sectionBlock.id) {
         ActiveItemToDrag = sectionBlock
+        ActiveItemToDrag.sectionIndex = e.target.dataset.sectionIndex
+        ActiveItemToDrag.blockIndex = e.target.dataset.blockIndex
+
       }
+    })
+  })
+}
+
+const SectionBlockHeaderItemDragStartListener = e => {
+  ActiveSection.sections.forEach(sectionItem => {
+    sectionItem.forEach(sectionBlock => {
+      sectionBlock.values.forEach(sectionBlockValue => {
+        if (Number(e.target.dataset.id) === sectionBlockValue.id) {
+          ActiveBlockHeaderToDrag = sectionBlockValue
+          ActiveBlockHeaderToDrag.sectionIndex = Number(e.target.dataset.sectionIndex)
+          ActiveBlockHeaderToDrag.blockIndex = Number(e.target.dataset.blockIndex)
+          ActiveBlockHeaderToDrag.index = Number(e.target.dataset.index)
+
+        }
+      })
     })
   })
 }
@@ -123,30 +167,53 @@ function StopResizeDivListener() {
 }
 
 const SectionDropListener = (e) => {
-  if (ActiveItemToDrag) {
-    ActiveSection.sections.forEach((sectionItem, sectionIndex) => {
-      sectionItem.forEach((sectionBlock, sectionBlockIndex) => {
-        if (ActiveItemToDrag.id === sectionBlock.id) {
-          if (sectionIndex === Number(e.target.dataset.index)) return
+  if (e.target.dataset.type !== "section") return
 
-          ActiveSection.sections[sectionIndex] = ActiveSection.sections[sectionIndex].filter(item => item.id !== ActiveItemToDrag.id)
-          ActiveSection.sections[Number(e.target.dataset.index)].push(ActiveItemToDrag)
-          buildSections()
-        }
-      })
-    })
-    ActiveItemToDrag = null
+
+  if (ActiveItemToDrag) {
+    ActiveSection.sections[ActiveItemToDrag.sectionIndex] =
+      ActiveSection.sections[ActiveItemToDrag.sectionIndex].filter(item => item.id !== ActiveItemToDrag.id)
+
+
+
+    ActiveSection.sections[Number(e.target.dataset.index)].push(ActiveItemToDrag)
+    buildSections()
   } else if (ActiveWidget) {
     const indexValue = Number(e.target.dataset.index)
     ActiveSection.sections[indexValue].push({
       id: Math.random(),
-      priority: ActiveSection.sections[indexValue].length + 1,
       height: 300,
       values: [{...ActiveWidget, active: true, id: Math.random()}]
     })
 
     ActiveWidget = null
 
+    buildSections()
+  } else if (ActiveBlockHeaderToDrag) {
+
+    // remove previous value
+    let sectionValues = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values
+    sectionValues.splice(ActiveBlockHeaderToDrag.index, 1)
+    if (sectionValues.length < 1) {
+      ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex].splice(ActiveBlockHeaderToDrag.blockIndex,1)
+    }
+
+    // add new active if active removed
+    if (ActiveBlockHeaderToDrag.active === true) {
+      if (sectionValues.length > 0) {
+        sectionValues[sectionValues.length - 1].active = true
+      }
+    }
+
+    // add new item
+    ActiveBlockHeaderToDrag.active = true
+    ActiveSection.sections[Number(e.target.dataset.index)].push({
+      id: Math.random(),
+      height: 300,
+      values: [ActiveBlockHeaderToDrag]
+    })
+
+    // build new sections
     buildSections()
   }
 }
@@ -155,70 +222,195 @@ const SectionDragOverListener = e => {
   e.preventDefault()
 }
 
-const SectionBlockDropListener = e => {
-  if (ActiveItemToDrag) {
+const SectionBlockHeaderDropListener = e => {
+  if (e.target.dataset.type !== "section-block-header") return
 
-
-    ActiveSection.sections.map((sectionItem, sectionIndex) => {
-      sectionItem.forEach((sectionBlock, blockIndex) => {
-        if (Number(e.target.dataset.id) === sectionBlock.id) {
-          if (Number(e.target.dataset.id) === ActiveItemToDrag.id) return alert('no')
-
-          ActiveSection.sections.forEach((sectionItem, sectionIndex) => {
-            sectionItem.forEach((sectionBlock, sectionBlockIndex) => {
-              if (ActiveItemToDrag.id === sectionBlock.id) {
-                if (sectionIndex === Number(e.target.dataset.index)) return
-                ActiveSection.sections[sectionIndex] = ActiveSection.sections[sectionIndex].filter(item => item.id !== ActiveItemToDrag.id)
-              }
-            })
-          })
-
-          setTimeout(() => {
-            ActiveSection.sections[sectionIndex].splice(blockIndex, 0, ActiveItemToDrag)
-
-            buildSections()
-            ActiveItemToDrag = null
-          }, 10)
-        }
-      })
-    })
-
-    e.preventDefault()
-    e.stopPropagation()
-  } else if (ActiveWidget) {
-    let sectionIndexValue = 0;
-    let blockIndexValue = 0;
-    ActiveSection.sections.map((sectionItem, sectionIndex) => {
-      sectionItem.forEach((sectionBlock, blockIndex) => {
-        if (Number(e.target.dataset.id) === sectionBlock.id) {
-          sectionIndexValue = sectionIndex
-          blockIndexValue = blockIndex
-        }
-      })
-    })
-
-    const sortedSectionBlockValues = ActiveSection.sections[sectionIndexValue][blockIndexValue].values.map(sortedItem => {
+  //
+  if (ActiveWidget) {
+    // set to false previous value
+    const sortedSectionBlockValues = ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values.map(sortedItem => {
       sortedItem.active = false
       return sortedItem
     })
 
-    ActiveSection.sections[sectionIndexValue][blockIndexValue].values = [...sortedSectionBlockValues, {
+    // add newValue
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values = [...sortedSectionBlockValues, {
       ...ActiveWidget,
+      id: Math.random(),
       active: true
     }]
 
-    ActiveWidget = null
+    // build new sections
     buildSections()
-    e.preventDefault()
-    e.stopPropagation()
+  } else if (ActiveItemToDrag) {
+    // remove previous block
+    ActiveSection.sections[ActiveItemToDrag.sectionIndex] =
+      ActiveSection.sections[ActiveItemToDrag.sectionIndex].filter(item => item.id !== ActiveItemToDrag.id)
+
+    // add new items
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values =
+      [
+        ...ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)]
+          .values.map(item => {
+            item.active = false
+             return item
+          }),
+        ...ActiveItemToDrag.values
+      ]
+
+    buildSections()
+  } else if (ActiveBlockHeaderToDrag) {
+    // check if the same block and only one length
+    if (
+      ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values.length < 2 &&
+      ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values[0].id === ActiveBlockHeaderToDrag.id
+    ) return
+
+    // remove item-widget
+    const values = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values
+    values.splice(ActiveBlockHeaderToDrag.index, 1)
+
+    // remove element if not have more items
+    if (values.length < 1) {
+      removeSectionBlockHelper(ActiveBlockHeaderToDrag.sectionIndex, ActiveBlockHeaderToDrag.blockIndex)
+    } else {
+      if (ActiveBlockHeaderToDrag.active === true) {
+        values[values.length - 1].active = true
+      }
+    }
+
+    // push to section
+    ActiveBlockHeaderToDrag.active = true
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values =
+      ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values.map(item => {
+        item.active = false
+        return item
+      })
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)][Number(e.target.dataset.blockIndex)].values.push(ActiveBlockHeaderToDrag)
+
+    buildSections()
   }
 
 
+  e.preventDefault()
+  e.stopPropagation()
+}
+const SectionBlockDropListener = e => {
+  if (e.target.dataset.type !== "section-block") return
+  if (ActiveItemToDrag) {
+    if (Number(e.target.dataset.id) === ActiveItemToDrag.id) return
+    ActiveSection.sections[ActiveItemToDrag.sectionIndex] =
+      ActiveSection.sections[ActiveItemToDrag.sectionIndex].filter(item => item.id !== ActiveItemToDrag.id)
+
+    // remove previous item
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)].splice(Number(e.target.dataset.blockIndex), 0, ActiveItemToDrag)
+
+    // build sections
+    buildSections()
+
+  } else if (ActiveBlockHeaderToDrag) {
+    // remove previous item
+    let sectionBlockItemIndex = null
+    const values = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values
+    values.forEach((sectionBlockValue, index) => {
+      if (ActiveBlockHeaderToDrag.id === sectionBlockValue.id) {
+        sectionBlockItemIndex = index
+      }
+    })
+    values.splice(sectionBlockItemIndex, 1)
+
+    // remove header if it not includes more item
+    if (values.length < 1) {
+      ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex].splice(ActiveBlockHeaderToDrag.blockIndex, 1)
+    }
+
+    // create new active value if move active element
+    if (ActiveBlockHeaderToDrag.active && values.length) {
+      values[values.length - 1].active = true
+    }
+
+    // add new item to section
+    ActiveSection.sections[Number(e.target.dataset.sectionIndex)].splice(Number(e.target.dataset.blockIndex), 0, {
+      id: Math.random(),
+      height: ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].height,
+      values: [{...ActiveBlockHeaderToDrag, active: true, id: Math.random()}]
+    })
+
+    // build new sections
+    buildSections()
+  }
+
+
+  e.preventDefault()
+  e.stopPropagation()
 }
 
 const SectionBlockDragOverListener = e => {
   e.preventDefault()
   e.stopPropagation()
+}
+
+const SectionBlockHeaderDragOverListener = e => {
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+const ActiveWidgetHeaderDropListener = e => {
+  const sectionIndex =  Number(e.target.dataset.sectionIndex)
+  const blockIndex = Number(e.target.dataset.blockIndex)
+  const headerBlockIndex = Number(e.target.dataset.index)
+  if (e.target.dataset.type !== 'active-widget-header-item') return
+
+  if (ActiveWidget) {
+    // push widget
+    ActiveSection.sections[sectionIndex][blockIndex].values = ActiveSection.sections[sectionIndex][blockIndex].values.map(item => {
+      item.active = false
+      return item
+    })
+    ActiveSection.sections[sectionIndex][blockIndex].values.splice(headerBlockIndex, 0, {...ActiveWidget, active: true, id: Math.random()})
+
+    buildSections()
+  } else if (ActiveBlockHeaderToDrag) {
+    // remove previous item
+    ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values.splice(ActiveBlockHeaderToDrag.index, 1)
+
+    // remove if note have more value
+    if (ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values.length < 1) {
+      ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex].splice(ActiveBlockHeaderToDrag.blockIndex, 1)
+    }
+
+    // new active
+    if (
+      ActiveBlockHeaderToDrag.active &&
+      ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex]?.values.length > 0
+    ) {
+      ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex]
+        .values[ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values.length - 1].active = true
+    }
+
+    // push widget
+    ActiveSection.sections[sectionIndex][blockIndex].values = ActiveSection.sections[sectionIndex][blockIndex].values.map(item => {
+      item.active = false
+      return item
+    })
+    ActiveBlockHeaderToDrag.active = true
+    ActiveSection.sections[sectionIndex][blockIndex].values.splice(headerBlockIndex, 0, {...ActiveBlockHeaderToDrag})
+
+    buildSections()
+  } else if (ActiveItemToDrag) {
+    // remove previous item
+    ActiveSection.sections[ActiveItemToDrag.sectionIndex].splice(ActiveItemToDrag.blockIndex, 1)
+
+    // push item
+    ActiveSection.sections[sectionIndex][blockIndex].values = ActiveSection.sections[sectionIndex][blockIndex].values.map(item => {
+      item.active = false
+      return item
+    })
+    ActiveSection.sections[sectionIndex][blockIndex].values.splice(headerBlockIndex, 0, ...ActiveItemToDrag.values)
+
+    //
+    buildSections()
+  }
 }
 
 const openConfigureSectionModal = () => {
@@ -255,6 +447,11 @@ const setActiveSection = () => {
   buildSections()
 }
 
+const clearSections = () => {
+  ActiveSection.sections = ActiveSection.name.split("-").map(() => [])
+  buildSections()
+}
+
 const toggleWidgetModal = () => {
   const modal = document.getElementById('widget-modal')
 
@@ -276,6 +473,7 @@ const buildWidgetModal = () => {
   const widgetDivToRemoveListener = document.getElementsByClassName("widget-modal-item")
   Array.prototype.forEach.call(widgetDivToRemoveListener, function (el) {
     el.removeEventListener("dragstart", WidgetDiveDragStartListener)
+    el.removeEventListener("dragend", ClearWidgetToDrag)
   });
 
   const modal = document.getElementById('widget-modal-content')
@@ -297,6 +495,7 @@ const buildWidgetModal = () => {
       widgetDiv.dataset.id = item.id
       widgetDiv.draggable = true
       widgetDiv.addEventListener("dragstart", WidgetDiveDragStartListener)
+      widgetDiv.addEventListener("dragend", ClearWidgetToDrag)
 
       groupDiv.appendChild(widgetDiv)
     })
@@ -360,9 +559,28 @@ const buildSections = () => {
     el.removeEventListener("drop", SectionBlockDropListener)
   });
 
+  const sectionBlocksHeaderToRemoveListener = document.getElementsByClassName("section-widget-wrap-header")
+  Array.prototype.forEach.call(sectionBlocksHeaderToRemoveListener, function (el) {
+    el.removeEventListener("dragstart", WidgetActiveItemDragStartListener)
+    el.removeEventListener("dragend", ClearActiveHeaderToDrag)
+    el.removeEventListener("dragover", SectionBlockHeaderDragOverListener)
+    el.removeEventListener("drop", SectionBlockHeaderDropListener)
+  });
+
+  const sectionBlocksHeaderItemToRemoveListener = document.getElementsByClassName("section-widget-wrap-header-item")
+  Array.prototype.forEach.call(sectionBlocksHeaderItemToRemoveListener, function (el) {
+    el.removeEventListener("dragstart", SectionBlockHeaderItemDragStartListener)
+    el.removeEventListener("dragend", ClearActiveItemToDrag)
+  });
+
   const sectionBlocksResizeToRemoveListener = document.getElementsByClassName("section-block-resize")
   Array.prototype.forEach.call(sectionBlocksResizeToRemoveListener, function (el) {
     el.removeEventListener('mousedown', ResizeElementListener)
+  });
+
+  const removeListeners = document.getElementsByClassName("remove-block")
+  Array.prototype.forEach.call(removeListeners, function (el) {
+    el.removeEventListener("click", removeSectionBlock)
   });
 
   // Create main section
@@ -376,45 +594,76 @@ const buildSections = () => {
     const newSectionBlock = document.createElement("div")
     newSectionBlock.className = "section-item"
     newSectionBlock.dataset.index = index.toString()
+    newSectionBlock.dataset.type = "section"
     newSectionBlock.addEventListener("dragover", SectionDragOverListener)
     newSectionBlock.addEventListener("drop", SectionDropListener)
 
     // add child blocks
-    item.forEach(block => {
+    item.forEach((block, blockIndex) => {
       // creat block + listeners
       const newBlock = document.createElement("div")
       newBlock.className = 'section-widget-wrap'
       newBlock.dataset.id = block.id
+      newBlock.dataset.type = "section-block"
       newBlock.style.backgroundColor = block.values.find(val => val.active).color
       newBlock.style.height = block.height + "px"
       newBlock.addEventListener("dragover", SectionBlockDragOverListener)
       newBlock.addEventListener("drop", SectionBlockDropListener)
+      newBlock.dataset.sectionIndex = index
+      newBlock.dataset.blockIndex = blockIndex
 
       // create block header
       const newBlockHeader = document.createElement("div")
       newBlockHeader.className = "section-widget-wrap-header"
       newBlockHeader.dataset.id = block.id
+      newBlockHeader.dataset.sectionIndex = index
+      newBlockHeader.dataset.blockIndex = blockIndex
+      newBlockHeader.dataset.type = "section-block-header"
       newBlockHeader.addEventListener("dragstart", WidgetActiveItemDragStartListener)
+      newBlockHeader.addEventListener("dragover", SectionBlockHeaderDragOverListener)
+      newBlockHeader.addEventListener("drop", SectionBlockHeaderDropListener)
+      newBlockHeader.addEventListener("dragend", ClearActiveItemToDrag)
       newBlockHeader.draggable = true
       newBlock.appendChild(newBlockHeader)
+
+
+      // create remove item element
+      const blockRemoveDiv = document.createElement("div")
+      blockRemoveDiv.dataset.id = block.id
+      blockRemoveDiv.className = "remove-block"
+      blockRemoveDiv.innerText = "x"
+      blockRemoveDiv.dataset.sectionIndex = index
+      blockRemoveDiv.dataset.blockIndex = blockIndex
+      blockRemoveDiv.addEventListener("click", removeSectionBlock)
+      newBlockHeader.appendChild(blockRemoveDiv)
 
 
       // create block resize element
       const blockResizeDiv = document.createElement("div")
       blockResizeDiv.dataset.id = block.id
       blockResizeDiv.className = "section-block-resize"
-      newBlock.appendChild(blockResizeDiv)
-
       blockResizeDiv.addEventListener('mousedown', ResizeElementListener)
+      newBlock.appendChild(blockResizeDiv)
 
 
       // create block values
-      block.values.forEach(blockValue => {
+      block.values.forEach((blockValue, blockValueIndex) => {
         const headerBlock = document.createElement("div")
         headerBlock.className = "section-widget-wrap-header-item"
-        headerBlock.style.backgroundColor = blockValue.active ? "transparent" : blockValue.color
+        headerBlock.style.backgroundColor = blockValue.color
+        headerBlock.style.height = blockValue.active ? "18px" : "12px"
         headerBlock.dataset.id = blockValue.id
+        headerBlock.dataset.type = "active-widget-header-item"
+        headerBlock.dataset.sectionIndex = index
+        headerBlock.dataset.index = blockValueIndex
+        headerBlock.dataset.blockIndex = blockIndex
         headerBlock.onclick = changeSectionBlockValue
+        headerBlock.draggable = true
+        headerBlock.addEventListener("dragstart", SectionBlockHeaderItemDragStartListener)
+        headerBlock.addEventListener("dragend", ClearActiveHeaderToDrag)
+        headerBlock.addEventListener("dragover", SectionBlockHeaderDragOverListener)
+        newBlockHeader.addEventListener("drop", ActiveWidgetHeaderDropListener)
+
         newBlockHeader.appendChild(headerBlock)
       })
 
@@ -475,7 +724,6 @@ buildBackground()
 buildSectionModalContent()
 buildSections()
 buildWidgetModal()
-
 
 dragElement(document.getElementById("configure-section-modal"), document.getElementById("modal-header"));
 dragElement(document.getElementById("widget-modal"), document.getElementById("widget-modal-header"));

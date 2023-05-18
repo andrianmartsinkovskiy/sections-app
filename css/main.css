@@ -102,6 +102,21 @@ body {
   cursor: pointer;
 }
 
+.remove-block {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  right: 0;
+  top: 0;
+  color: #fff;
+  background-color: rgba(0,0,0, 0.3);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  font-size: 11px;
+}
+
 .configure-section-modal {
   position: absolute;
   width: 380px;
@@ -270,9 +285,6 @@ body {
   cursor: pointer;
   border-radius: 3px;
 }
-
-
-
 
 
 .section-widget-wrap {
