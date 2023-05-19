@@ -1,7 +1,8 @@
 const SectionConfigure = [
   {
     name: "1",
-    sections: [[]]
+    sections: [[]],
+    blocks: []
   },
   {
     name: '1-1',
@@ -66,7 +67,7 @@ const AllWidgets = [
   ...GropedWidgets[2],
 ]
 let ActiveWidget = null
-let ActiveSection = SectionConfigure[5]
+let ActiveSection = SectionConfigure[0]
 let ActiveSectionToSet = null
 let ActiveBlockToResize = null
 let ActiveBlockDataToResize = null
@@ -75,6 +76,11 @@ let ActiveResizeValue = 0
 let StartResizeHeight = '0px'
 let ActiveItemToDrag = null
 let ActiveBlockHeaderToDrag = null
+let LastActiveSectionValues = null
+
+// single mode
+let ActiveSingleDrop = null
+
 
 
 const removeSectionBlockHelper = (sectionIndex, blockIndex) => {
@@ -309,6 +315,7 @@ const SectionBlockDropListener = e => {
     buildSections()
 
   } else if (ActiveBlockHeaderToDrag) {
+    const previousHeight = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].height
     // remove previous item
     let sectionBlockItemIndex = null
     const values = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values
@@ -332,7 +339,7 @@ const SectionBlockDropListener = e => {
     // add new item to section
     ActiveSection.sections[Number(e.target.dataset.sectionIndex)].splice(Number(e.target.dataset.blockIndex), 0, {
       id: Math.random(),
-      height: ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].height,
+      height: previousHeight,
       values: [{...ActiveBlockHeaderToDrag, active: true, id: Math.random()}]
     })
 
@@ -432,13 +439,36 @@ const closeConfigureSectionModal = () => {
 
 const setActiveSection = () => {
   if (!ActiveSectionToSet) return
-  ActiveSection.sections.map((section, index) => {
-    section.map(sectionBlock => {
-      if (ActiveSectionToSet.sections[index]) {
-        ActiveSectionToSet.sections[index].push(sectionBlock)
-      } else ActiveSectionToSet.sections[0].push(sectionBlock)
-    })
-  })
+
+  const area = document.getElementById("resizeable-area")
+
+  if (ActiveSectionToSet  .name === '1') {
+    area.style.display = "block"
+
+    LastActiveSectionValues = ActiveSection.sections
+  } else {
+    area.style.display = "none"
+
+    if (LastActiveSectionValues) {
+      LastActiveSectionValues.forEach((section, index) => {
+        section.forEach(sectionBlock => {
+          if (ActiveSectionToSet.sections[index]) {
+            ActiveSectionToSet.sections[index].push(sectionBlock)
+          } else ActiveSectionToSet.sections[0].push(sectionBlock)
+        })
+      })
+      LastActiveSectionValues = null
+    } else {
+      ActiveSection.sections.forEach((section, index) => {
+        section.forEach(sectionBlock => {
+          if (ActiveSectionToSet.sections[index]) {
+            ActiveSectionToSet.sections[index].push(sectionBlock)
+          } else ActiveSectionToSet.sections[0].push(sectionBlock)
+        })
+      })
+    }
+
+  }
 
   ActiveSection.sections = ActiveSection.name.split("-").map(() => [])
   ActiveSection = ActiveSectionToSet
@@ -588,6 +618,11 @@ const buildSections = () => {
   mainSection.innerText = ''
   mainSection.style.gridTemplateColumns = ActiveSection.name.split('-').join("fr ") + 'fr'
 
+  if (ActiveSection.name === '1') {
+    mainSection.style.display = 'none'
+  } else {
+    mainSection.style.display = 'grid'
+  }
 
   // Create sections blocks
   ActiveSection.sections.forEach((item, index) => {
@@ -757,3 +792,404 @@ function dragElement(element, header) {
     document.onmousemove = null;
   }
 }
+
+
+
+const buildArea = () => {
+  const area = document.getElementById("resizeable-area")
+  area.innerText = ""
+
+
+  ActiveSection.blocks.forEach((item, itemIndex) => {
+    const element = document.createElement("div")
+    element.className = 'resizable'
+    element.style.backgroundColor = item.color
+    element.classList.add("resizable_" + item.id)
+    element.id = "resizable_" + item.id
+    element.dataset.id = item.id
+    element.dataset.index = itemIndex.toString()
+    element.style.top = item.top + 'px'
+    element.style.left = item.left + 'px'
+    element.style.width = item.width + 'px'
+    element.style.height = item.height + 'px'
+    makeDraggableDiv(element)
+
+    // create header
+    const elementHeader = document.createElement("div")
+    elementHeader.className = "resizable-header"
+    element.appendChild(elementHeader)
+
+    // create resizer element
+    const resizerDiv = document.createElement("div")
+    resizerDiv.className = "resizers"
+
+    const TopLeftResize = document.createElement("div")
+    const TopRightResize = document.createElement("div")
+    const BottomLeftResize = document.createElement("div")
+    const BottomRightResize = document.createElement("div")
+
+    TopLeftResize.className = "resizer"
+    TopLeftResize.classList.add("resizer_" + item.id)
+    TopLeftResize.classList.add("top-left")
+
+    TopRightResize.className = "resizer"
+    TopRightResize.classList.add("resizer_" + item.id)
+    TopRightResize.classList.add("top-right")
+
+    BottomLeftResize.className = "resizer"
+    BottomLeftResize.classList.add("resizer_" + item.id)
+    BottomLeftResize.classList.add("bottom-left")
+
+    BottomRightResize.className = "resizer"
+    BottomRightResize.classList.add("resizer_" + item.id)
+    BottomRightResize.classList.add("bottom-right")
+
+    resizerDiv.appendChild(TopLeftResize)
+    resizerDiv.appendChild(TopRightResize)
+    resizerDiv.appendChild(BottomLeftResize)
+    resizerDiv.appendChild(BottomRightResize)
+
+    // add resize div to block
+    element.appendChild(resizerDiv)
+
+    const resizers = [TopLeftResize, TopRightResize, BottomLeftResize, BottomRightResize]
+    const minimum_size = 20;
+    let original_width = 0;
+    let original_height = 0;
+    let original_x = 0;
+    let original_y = 0;
+    let original_mouse_x = 0;
+    let original_mouse_y = 0;
+    for (let i = 0;i < resizers.length; i++) {
+      const currentResizer = resizers[i];
+      currentResizer.addEventListener('mousedown', function(e) {
+        e.preventDefault()
+        original_width = parseFloat(getComputedStyle(element, null).getPropertyValue('width').replace('px', ''));
+        original_height = parseFloat(getComputedStyle(element, null).getPropertyValue('height').replace('px', ''));
+        original_x = element.getBoundingClientRect().left;
+        original_y = element.getBoundingClientRect().top;
+        original_mouse_x = e.pageX;
+        original_mouse_y = e.pageY;
+        window.addEventListener('mousemove', resize)
+        window.addEventListener('mouseup', stopResize)
+      })
+
+      function resize(e) {
+        if (e.pageY < 60) return;
+
+        if (currentResizer.classList.contains('bottom-right')) {
+          let hasError = false
+          const width = original_width + (e.pageX - original_mouse_x);
+          const height = original_height + (e.pageY - original_mouse_y)
+          const topPoint = e.pageY - height
+          const leftPoint = e.pageX - width
+
+          const elements = document.getElementsByClassName("resizable")
+          Array.prototype.forEach.call(elements, errorElement => {
+            if (errorElement.classList.contains("resizable_" + item.id)) return
+            const bounding = errorElement.getBoundingClientRect()
+
+            if (bounding.right < leftPoint) return
+
+            // check if in horizontal view
+            if (
+              e.pageY >= bounding.top && e.pageY < bounding.bottom ||
+              e.pageY >= bounding.bottom && topPoint < bounding.bottom
+            ) {
+
+              // check is left point in other area
+              if(e.pageX > bounding.left) {
+                hasError = true
+                return;
+              };
+            }
+          });
+          if (hasError) return
+
+
+          if (width > minimum_size) {
+            element.style.width = width + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].width = width
+          }
+          if (height > minimum_size) {
+            element.style.height = height + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].height = height
+          }
+        }
+        else if (currentResizer.classList.contains('bottom-left')) {
+          let hasError = false
+          const height = original_height + (e.pageY - original_mouse_y)
+          const width = original_width - (e.pageX - original_mouse_x)
+          const topPoint = e.pageY - height
+          const rightPoint = e.pageX + width
+
+
+          const elements = document.getElementsByClassName("resizable")
+          Array.prototype.forEach.call(elements, errorElement => {
+            if (errorElement.classList.contains("resizable_" + item.id)) return
+            const bounding = errorElement.getBoundingClientRect()
+
+            if (rightPoint < bounding.left) return;
+
+            // check if in horizontal view
+            if (
+              e.pageY >= bounding.top && e.pageY < bounding.bottom ||
+              e.pageY > bounding.top && topPoint < bounding.bottom ||
+              e.pageY <= topPoint
+            ) {
+
+              // check is left point in other area
+              if(e.pageX < bounding.right) {
+                hasError = true
+                return;
+              };
+            }
+          });
+          if (hasError) return
+
+
+          if (height > minimum_size) {
+            element.style.height = height + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].height = height
+          }
+          if (width > minimum_size) {
+            element.style.width = width + 'px'
+            element.style.left = original_x + (e.pageX - original_mouse_x) + 'px'
+
+            ActiveSection.blocks[Number(element.dataset.index)].width = width
+            ActiveSection.blocks[Number(element.dataset.index)].left = original_x + (e.pageX - original_mouse_x)
+          }
+        }
+        else if (currentResizer.classList.contains('top-right')) {
+          let hasError = false
+          const width = original_width + (e.pageX - original_mouse_x)
+          const height = original_height - (e.pageY - original_mouse_y)
+          const leftPoint = e.pageX - width
+          const bottomPoint = e.pageY + height
+
+          const elements = document.getElementsByClassName("resizable")
+          Array.prototype.forEach.call(elements, errorElement => {
+            if (errorElement.classList.contains("resizable_" + item.id)) return
+            const bounding = errorElement.getBoundingClientRect()
+
+            if (bounding.right < leftPoint) return
+
+            // check if in horizontal view
+            if (
+              e.pageY >= bounding.top && e.pageY < bounding.bottom ||
+              e.pageY < bounding.top && bottomPoint > bounding.top
+            ) {
+
+              // check is left point in other area
+              if(e.pageX > bounding.left) {
+                hasError = true
+                return;
+              };
+            }
+          });
+          if (hasError) return;
+
+          if (width > minimum_size) {
+            element.style.width = width + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].width = width
+          }
+          if (height > minimum_size) {
+            element.style.height = height + 'px'
+            element.style.top = original_y + (e.pageY - original_mouse_y) + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].height = height
+            ActiveSection.blocks[Number(element.dataset.index)].top = original_y + (e.pageY - original_mouse_y)
+          }
+        }
+        else {
+          let hasError = false
+          const width = original_width - (e.pageX - original_mouse_x)
+          const height = original_height - (e.pageY - original_mouse_y)
+          const bottomPoint = e.pageY + height
+          const rightPoint = e.pageX + width
+
+
+          const elements = document.getElementsByClassName("resizable")
+          Array.prototype.forEach.call(elements, errorElement => {
+            if (errorElement.classList.contains("resizable_" + item.id)) return
+            const bounding = errorElement.getBoundingClientRect()
+
+            if (rightPoint < bounding.left) return;
+
+            // check if in horizontal view
+            if (
+              bottomPoint >= bounding.top && bottomPoint < bounding.bottom ||
+              bottomPoint > bounding.bottom && e.pageY < bounding.bottom
+            ) {
+
+              // check is left point in other area
+              if(e.pageX < bounding.right) {
+
+                hasError = true
+                return;
+              };
+            }
+          });
+
+          if (hasError) return
+
+          if (width > minimum_size) {
+            element.style.width = width + 'px'
+            element.style.left = original_x + (e.pageX - original_mouse_x) + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].width = width
+            ActiveSection.blocks[Number(element.dataset.index)].left = original_x + (e.pageX - original_mouse_x)
+          }
+          if (height > minimum_size) {
+            element.style.height = height + 'px'
+            element.style.top = original_y + (e.pageY - original_mouse_y) + 'px'
+            ActiveSection.blocks[Number(element.dataset.index)].height = height
+            ActiveSection.blocks[Number(element.dataset.index)].top = original_y + (e.pageY - original_mouse_y)
+          }
+        }
+      }
+
+      function stopResize() {
+        window.removeEventListener('mousemove', resize)
+      }
+    }
+
+    area.appendChild(element)
+  })
+}
+
+// res
+
+const area = document.getElementById("resizeable-area")
+area.addEventListener("drop", areaDrop)
+area.addEventListener("dragover", areaDragOver)
+function areaDragOver(e) {
+  e.preventDefault()
+}
+function areaDrop (e) {
+  if (ActiveWidget) {
+    let hasError = false;
+    const newItem = {
+      top: e.clientY,
+      left: e.clientX,
+      right: e.clientX + 100,
+      bottom: e.clientY + 50,
+    }
+
+    const elements = document.getElementsByClassName("resizable")
+
+    Array.prototype.forEach.call(elements, errorElement => {
+      const bounding = errorElement.getBoundingClientRect()
+
+      const oldPoint = {
+        top: bounding.top,
+        left: bounding.left,
+        right: bounding.left + errorElement.clientWidth,
+        bottom: bounding.top + errorElement.clientHeight
+      }
+
+
+
+
+      if (intersectRect(oldPoint, newItem)) {
+        hasError = true
+      }
+    });
+    if (hasError) return
+
+    ActiveSection.blocks.push({
+      id: Math.random(),
+      color: ActiveWidget.color,
+      width: 100,
+      height: 50,
+      left: e.clientX,
+      top: e.clientY
+    })
+
+    buildArea()
+    return;
+  }
+
+  let hasError = false;
+  const elements = document.getElementsByClassName("resizable")
+  const newPointLeft = e.clientX - ActiveSingleDrop.clickOffsetLeft
+  const newPointTop = e.clientY - ActiveSingleDrop.clickOffsetTop
+  const newPointRight = e.clientX - ActiveSingleDrop.clickOffsetLeft + ActiveSingleDrop.width
+  const newPointBottom = e.clientY - ActiveSingleDrop.clickOffsetTop + ActiveSingleDrop.height
+
+
+  if (newPointLeft < 0) return;
+  if (newPointTop < 60) return;
+  if (newPointRight > window.innerWidth) return;
+  if (newPointBottom > window.innerHeight) return;
+  Array.prototype.forEach.call(elements, errorElement => {
+    // check if the same
+    if (errorElement.classList.contains("resizable_" + ActiveSingleDrop.id)) return
+
+    const bounding = errorElement.getBoundingClientRect()
+
+    const newPoint = {
+      top: newPointTop,
+      left: newPointLeft,
+      right: newPointRight,
+      bottom: newPointBottom
+    }
+
+    const oldPoint = {
+      top: bounding.top,
+      left: bounding.left,
+      right: bounding.left + errorElement.clientWidth,
+      bottom: bounding.top + errorElement.clientHeight
+    }
+
+
+   if (intersectRect(oldPoint, newPoint)) {
+     hasError = true
+   }
+  });
+
+  if (hasError) return
+
+  const activeItem = ActiveSection.blocks.find(function (el) {
+    return el.id === ActiveSingleDrop.id
+  });
+
+  activeItem.top = e.clientY - ActiveSingleDrop.clickOffsetTop
+  activeItem.left = e.clientX - ActiveSingleDrop.clickOffsetLeft
+
+
+  buildArea()
+}
+
+const makeDraggableDiv = (element) => {
+  element.draggable = true
+  element.addEventListener("dragstart", divDragStart)
+  element.addEventListener("dragend", divDragEnd)
+
+
+  function divDragStart (e) {
+    const bounding = element.getBoundingClientRect()
+    //console.log(bounding, 'bounding')
+    //console.log('click event' + `x - ${e.pageX} : y - ${e.pageY}` )
+    //console.log('bounding event' + `x - ${bounding.left} : y - ${bounding.top}` )
+    ActiveSingleDrop = {
+      clickOffsetTop: e.pageY - bounding.top,
+      clickOffsetLeft: e.pageX - bounding.left,
+      ...ActiveSection.blocks[Number(e.target.dataset.index)],
+    }
+
+    element.classList.add('hide-drag');
+  }
+  function divDragEnd (e) {
+    element.classList.remove('hide-drag');
+    ActiveSingleDrop = null
+  }
+}
+
+function intersectRect(a, b) {
+  return (a.left <= b.right &&
+    b.left <= a.right &&
+    a.top <= b.bottom &&
+    b.top <= a.bottom)
+}
+
+buildArea()
+
