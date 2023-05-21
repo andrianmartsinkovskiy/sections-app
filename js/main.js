@@ -7,19 +7,22 @@ const SectionConfigure = [
   {
     name: '1-1',
     sections: [[], []],
-    sectionsWidth: [[50, 50]]
+    sectionsWidth: [50, 50]
   },
   {
     name: '3-1',
-    sections: [[], []]
+    sections: [[], []],
+    sectionsWidth: [75, 25]
   },
   {
     name: '1-3',
-    sections: [[], []]
+    sections: [[], []],
+    sectionsWidth: [25, 75]
   },
   {
     name: '2-2-2',
     sections: [[], [], []],
+    sectionsWidth: [33, 34, 33]
   },
   {
     name: '1-2-1',
@@ -27,7 +30,8 @@ const SectionConfigure = [
       [],
       [],
       []
-    ]
+    ],
+    sectionsWidth: [25, 50, 25]
   }
 ]
 const GropedWidgets = [
@@ -68,7 +72,7 @@ const AllWidgets = [
   ...GropedWidgets[2],
 ]
 let ActiveWidget = null
-let ActiveSection = SectionConfigure[0]
+let ActiveSection = SectionConfigure[1]
 let ActiveSectionToSet = null
 let ActiveBlockToResize = null
 let ActiveBlockDataToResize = null
@@ -77,6 +81,7 @@ let ActiveResizeValue = 0
 let StartResizeHeight = '0px'
 let ActiveItemToDrag = null
 let ActiveBlockHeaderToDrag = null
+let ActiveColumnToResizeIndex = null
 
 // single mode
 let ActiveSingleDrop = null
@@ -875,7 +880,6 @@ const choseSection = (e) => {
 
   ActiveSection = SectionConfigure.find(item => item.name === e.target.dataset.name)
 
-  console.log(previousSectionValues.length, 'previousSectionValues.length')
   previousSectionValues.forEach((section, index) => {
     section.forEach(sectionBlock => {
       if (ActiveSection.sections[index]) {
@@ -943,7 +947,7 @@ const buildSectionModalContent = () => {
     newBlock.classList.add("modal-configure-section-item")
 
 
-    if (item.name === ActiveSectionToSet?.name) {
+    if (item.name === ActiveSection?.name) {
       newBlock.classList.add("modal-configure-section-item-active")
     }
 
@@ -965,6 +969,69 @@ const buildSectionModalContent = () => {
   mainSection.appendChild(sectionItem1)
   mainSection.appendChild(sectionItem2)
   mainSection.appendChild(sectionItem3)
+}
+
+const ResizeColumn = (e) => {
+  const proc = window.innerWidth / 100
+
+  if (ActiveColumnToResizeIndex === 0) {
+    // check is not right as third block
+    if (
+      ActiveSection.sectionsWidth[2]
+      && (e.clientX / proc + 1)  > (100 - ActiveSection.sectionsWidth[2])
+    ) return
+
+    ActiveSection.sectionsWidth[0] = e.clientX / proc
+    ActiveSection.sectionsWidth[1] = 100 - ActiveSection.sectionsWidth[0]
+
+    if (ActiveSection.sectionsWidth[2]) {
+      ActiveSection.sectionsWidth[1] = ActiveSection.sectionsWidth[1] - - ActiveSection.sectionsWidth[2]
+    }
+
+    const activeItem = document.getElementById("section_item_" + ActiveColumnToResizeIndex)
+    activeItem.style.width = ActiveSection.sectionsWidth[0] + '%'
+
+    const secondItem = document.getElementById("section_item_1")
+    secondItem.style.left = ActiveSection.sectionsWidth[0] + '%'
+
+    // set second section width
+    if (ActiveSection.sectionsWidth[2]) {
+      secondItem.style.width = (100 - ActiveSection.sectionsWidth[0] - ActiveSection.sectionsWidth[2]) + '%'
+    } else {
+      secondItem.style.width = 100 - ActiveSection.sectionsWidth[0] + '%'
+    }
+
+  } else if (ActiveColumnToResizeIndex === 1) {
+    if (e.clientX / proc + 1 < ActiveSection.sectionsWidth[0]) return;
+
+    const activeItem = document.getElementById("section_item_" + ActiveColumnToResizeIndex)
+    activeItem.style.width = 100 - (100 - (e.clientX / proc)) - ActiveSection.sectionsWidth[0] + '%'
+    ActiveSection.sectionsWidth[1] = 100 - (100 - (e.clientX / proc)) - ActiveSection.sectionsWidth[0]
+
+
+    const secondItem = document.getElementById("section_item_2")
+    secondItem.style.width = 100 - ActiveSection.sectionsWidth[0] - ActiveSection.sectionsWidth[1] + '%'
+    secondItem.style.left = ActiveSection.sectionsWidth[0] + ActiveSection.sectionsWidth[1] + '%'
+    ActiveSection.sectionsWidth[2] = 100 - ActiveSection.sectionsWidth[0] - ActiveSection.sectionsWidth[1]
+  }
+}
+
+const StopResizeColumn = () => {
+  window.removeEventListener('mousemove', ResizeColumn)
+  window.removeEventListener('mouseup', StopResizeColumn)
+  ActiveColumnToResizeIndex = null
+}
+
+const StartResizeColumnListener = (e) => {
+  ActiveColumnToResizeIndex = Number(e.target.dataset.index)
+  window.addEventListener('mousemove', ResizeColumn)
+  window.addEventListener('mouseup', StopResizeColumn)
+}
+
+
+
+const MakeColumnResizable = (resizer) => {
+  resizer.addEventListener("mousedown", StartResizeColumnListener)
 }
 
 const buildSections = () => {
@@ -1032,12 +1099,34 @@ const buildSections = () => {
     mainContainer.style.height = "100vh"
   }
 
+  const getSectionLeftByIndex = (arr, index) => {
+    if (index === 0) return 0
+    if (index === 1) return arr[0]
+    if (index === 2) return arr[0] + arr[1]
+  }
+
   // Create sections blocks
   ActiveSection.sections.forEach((item, index) => {
+
     const newSectionBlock = document.createElement("div")
     newSectionBlock.className = "section-item"
     newSectionBlock.dataset.index = index.toString()
     newSectionBlock.dataset.type = "section"
+    newSectionBlock.id= "section_item_" + index
+    newSectionBlock.style.width = ActiveSection.sectionsWidth[index] + '%'
+    newSectionBlock.style.left = getSectionLeftByIndex(ActiveSection.sectionsWidth, index) + '%'
+
+
+
+    if (index !== ActiveSection.sections.length -1) {
+      const sectionWidthResizer = document.createElement("div")
+      sectionWidthResizer.className = "section-width-resizer"
+      sectionWidthResizer.dataset.index = index.toString()
+      MakeColumnResizable(sectionWidthResizer)
+
+      newSectionBlock.appendChild(sectionWidthResizer)
+    }
+
 
     if (ActiveSection.name !== '1') {
       newSectionBlock.style.paddingBottom = "100px"
