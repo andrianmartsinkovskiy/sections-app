@@ -52,7 +52,11 @@ body {
 
 .container {
   overflow-y: scroll;
-  position: relative;
+  position: absolute;
+  height: calc(100vh - 60px);
+  top: 60px;
+  width: 100vw;
+  overflow-x: hidden;
 }
 
 .back {
@@ -131,7 +135,7 @@ body {
   border-radius: 15px;
   display: grid;
   grid-template-rows: 40px 1fr;
-  z-index: 250;
+  z-index: 1250;
 }
 
 .configure-section-item-wrap {
@@ -240,7 +244,7 @@ body {
   border-radius: 6px;
   grid-template-rows: 40px 1fr;
   display: none;
-  z-index: 250;
+  z-index: 1250;
 }
 
 .widget-modal-active {
@@ -290,9 +294,10 @@ body {
 
 
 .section-widget-wrap {
-  width: 100%;
   position: relative;
 }
+
+
 
 .section-widget-wrap-header {
   background-color: rgba(0,0,0, 0.3);
@@ -325,7 +330,6 @@ body {
 .section-item {
   overflow-y: scroll;
   max-height: 100%;
-  padding-bottom: 100px;
 }
 
 .section-widget-wrap-header-item {
@@ -350,12 +354,12 @@ body {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 143;
+  z-index: -1;
 }
 
 .resizable {
   position: absolute;
-  z-index: 14;
+  z-index: 505;
 }
 
 .resizable-header {
@@ -365,6 +369,7 @@ body {
   height: 20px;
   width: 100%;
   background-color: rgba(0,0,0, 0.3);
+  display: flex;
 }
 
 .resizable:hover .resizers {
@@ -374,9 +379,10 @@ body {
 .resizable .resizers {
   width: 100%;
   height: 100%;
-  border: 3px solid #4286f4;
   box-sizing: border-box;
   opacity: 0;
+  z-index: -1;
+  position: absolute;
 }
 
 .resizable .resizers .resizer{
@@ -389,22 +395,26 @@ body {
 }
 
 .resizable .resizers .resizer.top-left {
-  left: -5px;
-  top: -5px;
+  left: -9px;
+  top: -9px;
   cursor: nwse-resize; /*resizer cursor*/
 }
 .resizable .resizers .resizer.top-right {
-  right: -5px;
-  top: -5px;
+  right: -9px;
+  top: -9px;
   cursor: nesw-resize;
 }
 .resizable .resizers .resizer.bottom-left {
-  left: -5px;
-  bottom: -5px;
+  left: -9px;
+  bottom: -9px;
   cursor: nesw-resize;
 }
 .resizable .resizers .resizer.bottom-right {
-  right: -5px;
-  bottom: -5px;
+  right: -9px;
+  bottom: -9px;
   cursor: nwse-resize;
+}
+
+.single-header-item {
+  width: 80px;
 }
