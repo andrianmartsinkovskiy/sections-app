@@ -72,8 +72,7 @@ const AllWidgets = [
   ...GropedWidgets[2],
 ]
 let ActiveWidget = null
-let ActiveSection = SectionConfigure[1]
-let ActiveSectionToSet = null
+let ActiveSection = SectionConfigure[0]
 let ActiveBlockToResize = null
 let ActiveBlockDataToResize = null
 let StartResizeValue = null
@@ -390,6 +389,10 @@ const ClearActiveHeaderToDrag = () => {
 }
 
 const ClearActiveItemToDrag = () => {
+  if (ActiveSection.name === '1') {
+    ActiveSingleDrop = null
+  }
+
   ActiveItemToDrag = null
 }
 
@@ -402,6 +405,19 @@ const WidgetDiveDragStartListener = e => {
 }
 
 const WidgetActiveItemDragStartListener = e => {
+  if (e.target.className !== 'section-widget-wrap-header') return
+  if (ActiveSection.name === '1') {
+    const element = document.getElementById("resizable_" + e.target.dataset.itemId)
+    element.classList.add('hide-drag');
+
+    const bounding = element.getBoundingClientRect()
+    ActiveSingleDrop = {
+      clickOffsetTop: e.pageY - bounding.top,
+      clickOffsetLeft: e.pageX - bounding.left,
+      ...ActiveSection.sections[0][Number(e.target.dataset.blockIndex)],
+    }
+  }
+
   ActiveSection.sections.forEach(sectionItem => {
     sectionItem.forEach(sectionBlock => {
       if (Number(e.target.dataset.id) === sectionBlock.id) {
@@ -465,8 +481,7 @@ function StopResizeDivListener() {
 
 const SectionDropListener = (e) => {
   if (e.target.dataset.type !== "section") return
-  if(!ActiveSingleDrop && !ActiveWidget && ActiveSection.name === '1') return;
-
+  if(!ActiveSingleDrop && !ActiveWidget && !ActiveBlockHeaderToDrag && ActiveSection.name === '1') return;
 
   if (ActiveSection.name === '1') {
     if (ActiveWidget) {
@@ -509,6 +524,34 @@ const SectionDropListener = (e) => {
         values: [{
           id: Math.random(),
           color: ActiveWidget.color,
+          active: true
+        }]
+      })
+
+      buildSections()
+    } else if (ActiveBlockHeaderToDrag) {
+      const blockVal = ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex]
+
+      if (ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex][ActiveBlockHeaderToDrag.blockIndex].values.length === 1) {
+        ActiveSection.sections[ActiveBlockHeaderToDrag.sectionIndex].splice(ActiveBlockHeaderToDrag.blockIndex, 1)
+      } else {
+        blockVal.values =
+          blockVal.values.filter(item => item.id !== ActiveBlockHeaderToDrag.id)
+
+        if (ActiveBlockHeaderToDrag.active) {
+          blockVal.values[blockVal.values.length - 1].active = true
+        }
+      }
+
+      ActiveSection.sections[0].push({
+        id: Math.random(),
+        width: blockVal.width,
+        height: blockVal.height,
+        left: e.clientX,
+        top: e.clientY,
+        values: [{
+          id: Math.random(),
+          color: ActiveBlockHeaderToDrag.color,
           active: true
         }]
       })
@@ -561,7 +604,6 @@ const SectionDropListener = (e) => {
 
       activeItem.top = e.clientY - ActiveSingleDrop.clickOffsetTop
       activeItem.left = e.clientX - ActiveSingleDrop.clickOffsetLeft
-
 
       buildSections()
     }
@@ -848,10 +890,11 @@ const closeConfigureSectionModal = () => {
 }
 
 const cancelSectionEdit = () => {
-  //ActiveSection =  JSON.parse(JSON.stringify(LastActiveSection))
-  //LastActiveSection = null
+  ActiveSection.sections = ActiveSection.name.split('-').map(() => [])
+  ActiveSection =  LastActiveSection
+  LastActiveSection = null
   closeConfigureSectionModal()
-  //buildSections()
+  buildSections()
 }
 
 const setActiveSection = () => {
@@ -860,6 +903,17 @@ const setActiveSection = () => {
 
 const clearSections = () => {
   ActiveSection.sections = ActiveSection.name.split("-").map(() => [])
+  // restore section width
+  let allItems = 0;
+  let procValue = 0;
+  const newWidthValue = ActiveSection.name.split('-')
+    .map(item => {
+      allItems += Number(item)
+      return Number(item)
+    })
+  procValue = 100 / allItems
+  ActiveSection.sectionsWidth = newWidthValue.map(item => item * procValue)
+
   buildSections()
 }
 
@@ -877,6 +931,18 @@ const toggleWidgetModal = () => {
 const choseSection = (e) => {
   const previousSectionValues = [...ActiveSection.sections]
   ActiveSection.sections = ActiveSection.name.split("-").map(() => [])
+
+  // restore section width
+  let allItems = 0;
+  let procValue = 0;
+  const newWidthValue = ActiveSection.name.split('-')
+    .map(item => {
+      allItems += Number(item)
+      return Number(item)
+    })
+  procValue = 100 / allItems
+  ActiveSection.sectionsWidth = newWidthValue.map(item => item * procValue)
+
 
   ActiveSection = SectionConfigure.find(item => item.name === e.target.dataset.name)
 
@@ -1028,8 +1094,6 @@ const StartResizeColumnListener = (e) => {
   window.addEventListener('mouseup', StopResizeColumn)
 }
 
-
-
 const MakeColumnResizable = (resizer) => {
   resizer.addEventListener("mousedown", StartResizeColumnListener)
 }
@@ -1113,6 +1177,8 @@ const buildSections = () => {
     newSectionBlock.dataset.index = index.toString()
     newSectionBlock.dataset.type = "section"
     newSectionBlock.id= "section_item_" + index
+
+    // add left and width
     newSectionBlock.style.width = ActiveSection.sectionsWidth[index] + '%'
     newSectionBlock.style.left = getSectionLeftByIndex(ActiveSection.sectionsWidth, index) + '%'
 
@@ -1165,11 +1231,9 @@ const buildSections = () => {
         newBlock.style.top = block.top + 'px'
         newBlock.style.left = block.left + 'px'
         newBlock.classList.add("resizable")
-        makeDraggableDiv(newBlock)
+        //makeDraggableDiv(newBlock)
         makeElementResizeable(newBlock, block.id)
       }
-
-
 
       // create block header
       const newBlockHeader = document.createElement("div")
@@ -1178,6 +1242,7 @@ const buildSections = () => {
       newBlockHeader.dataset.sectionIndex = index.toString()
       newBlockHeader.dataset.blockIndex = blockIndex.toString()
       newBlockHeader.dataset.type = "section-block-header"
+      newBlockHeader.dataset.itemId = block.id
       newBlockHeader.addEventListener("dragstart", WidgetActiveItemDragStartListener)
       newBlockHeader.addEventListener("dragover", SectionBlockHeaderDragOverListener)
       newBlockHeader.addEventListener("drop", SectionBlockHeaderDropListener)
@@ -1243,7 +1308,6 @@ const changeSectionBlockValue = (e) => {
   let sectionVal = null;
   let sectionBlockVal = null;
   let sectionBlockItemVal = null;
-
   ActiveSection.sections.forEach((section, sectionIndex) => {
     section.forEach((sectionBlock, sectionBlockIndex) => {
       sectionBlock.values.forEach((sectionBlockItem, sectionBlockItemIndex) => {
@@ -1320,9 +1384,6 @@ function dragElement(element, header) {
     document.onmousemove = null;
   }
 }
-
-
-
 
 function intersectRect(a, b) {
   return (a.left <= b.right &&
