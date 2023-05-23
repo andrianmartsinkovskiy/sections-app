@@ -1051,7 +1051,7 @@ const ResizeColumn = (e) => {
     ActiveSection.sectionsWidth[1] = 100 - ActiveSection.sectionsWidth[0]
 
     if (ActiveSection.sectionsWidth[2]) {
-      ActiveSection.sectionsWidth[1] = ActiveSection.sectionsWidth[1] - - ActiveSection.sectionsWidth[2]
+      ActiveSection.sectionsWidth[1] = (100 - ActiveSection.sectionsWidth[0] - ActiveSection.sectionsWidth[2])
     }
 
     const activeItem = document.getElementById("section_item_" + ActiveColumnToResizeIndex)
@@ -1080,6 +1080,8 @@ const ResizeColumn = (e) => {
     secondItem.style.left = ActiveSection.sectionsWidth[0] + ActiveSection.sectionsWidth[1] + '%'
     ActiveSection.sectionsWidth[2] = 100 - ActiveSection.sectionsWidth[0] - ActiveSection.sectionsWidth[1]
   }
+
+  console.log(ActiveSection.sectionsWidth, 'www')
 }
 
 const StopResizeColumn = () => {
@@ -1168,6 +1170,8 @@ const buildSections = () => {
     if (index === 1) return arr[0]
     if (index === 2) return arr[0] + arr[1]
   }
+  console.log(ActiveSection.sectionsWidth, 'ActiveSection.sectionsWidth')
+
 
   // Create sections blocks
   ActiveSection.sections.forEach((item, index) => {
@@ -1177,6 +1181,7 @@ const buildSections = () => {
     newSectionBlock.dataset.index = index.toString()
     newSectionBlock.dataset.type = "section"
     newSectionBlock.id= "section_item_" + index
+
 
     // add left and width
     newSectionBlock.style.width = ActiveSection.sectionsWidth[index] + '%'
