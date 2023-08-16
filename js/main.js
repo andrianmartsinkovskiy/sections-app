@@ -116,35 +116,6 @@ const makeDraggableDiv = (element) => {
 }
 
 const resize = (e) => {
-  // check the same point
-  /*
-  let hasError = false
-  const topPoint = e.pageY - height
-  const leftPoint = e.pageX - width
-
-
-    const elements = document.getElementsByClassName("resizable")
-    Array.prototype.forEach.call(elements, errorElement => {
-      if (errorElement.classList.contains("resizable_" + item.id)) return
-      const bounding = errorElement.getBoundingClientRect()
-
-      if (bounding.right < leftPoint) return
-
-      // check if in horizontal view
-      if (
-        e.pageY >= bounding.top && e.pageY < bounding.bottom ||
-        e.pageY >= bounding.bottom && topPoint < bounding.bottom
-      ) {
-
-        // check is left point in other area
-        if(e.pageX > bounding.left) {
-          hasError = true
-          return;
-        };
-      }
-    });
-    if (hasError) return
-   */
   if (e.pageY < 60) return;
 
   if (ActiveResizerValues.currentResizer.classList.contains('bottom-right')) {
@@ -161,35 +132,6 @@ const resize = (e) => {
     }
   }
   else if (ActiveResizerValues.currentResizer.classList.contains('bottom-left')) {
-    // check the same point
-    /*
-      let hasError = false
-      const topPoint = e.pageY - height
-      const rightPoint = e.pageX + width
-      const elements = document.getElementsByClassName("resizable")
-      Array.prototype.forEach.call(elements, errorElement => {
-        if (errorElement.classList.contains("resizable_" + item.id)) return
-        const bounding = errorElement.getBoundingClientRect()
-
-        if (rightPoint < bounding.left) return;
-
-        // check if in horizontal view
-        if (
-          e.pageY >= bounding.top && e.pageY < bounding.bottom ||
-          e.pageY > bounding.top && topPoint < bounding.bottom ||
-          e.pageY <= topPoint
-        ) {
-
-          // check is left point in other area
-          if(e.pageX < bounding.right) {
-            hasError = true
-            return;
-          };
-        }
-      });
-      if (hasError) return
-
-     */
     const height = ActiveResizerValues.original_height + (e.pageY - ActiveResizerValues.original_mouse_y)
     const width = ActiveResizerValues.original_width - (e.pageX - ActiveResizerValues.original_mouse_x)
 
@@ -208,34 +150,6 @@ const resize = (e) => {
     }
   }
   else if (ActiveResizerValues.currentResizer.classList.contains('top-right')) {
-    // check the same point
-    /*
-      let hasError = false
-      const leftPoint = e.pageX - width
-      const bottomPoint = e.pageY + height
-      const elements = document.getElementsByClassName("resizable")
-      Array.prototype.forEach.call(elements, errorElement => {
-        if (errorElement.classList.contains("resizable_" + item.id)) return
-        const bounding = errorElement.getBoundingClientRect()
-
-        if (bounding.right < leftPoint) return
-
-        // check if in horizontal view
-        if (
-          e.pageY >= bounding.top && e.pageY < bounding.bottom ||
-          e.pageY < bounding.top && bottomPoint > bounding.top
-        ) {
-
-          // check is left point in other area
-          if(e.pageX > bounding.left) {
-            hasError = true
-            return;
-          };
-        }
-      });
-      if (hasError) return;
-
-     */
     const width = ActiveResizerValues.original_width + (e.pageX - ActiveResizerValues.original_mouse_x)
     const height = ActiveResizerValues.original_height - (e.pageY - ActiveResizerValues.original_mouse_y)
 
@@ -252,35 +166,6 @@ const resize = (e) => {
     }
   }
   else {
-    // check the same point
-    /*
-      let hasError = false
-      const bottomPoint = e.pageY + height
-      const rightPoint = e.pageX + width
-      const elements = document.getElementsByClassName("resizable")
-      Array.prototype.forEach.call(elements, errorElement => {
-        if (errorElement.classList.contains("resizable_" + item.id)) return
-        const bounding = errorElement.getBoundingClientRect()
-
-        if (rightPoint < bounding.left) return;
-
-        // check if in horizontal view
-        if (
-          bottomPoint >= bounding.top && bottomPoint < bounding.bottom ||
-          bottomPoint > bounding.bottom && e.pageY < bounding.bottom
-        ) {
-
-          // check is left point in other area
-          if(e.pageX < bounding.right) {
-
-            hasError = true
-            return;
-          };
-        }
-      });
-
-      if (hasError) return
-     */
     const width = ActiveResizerValues.original_width - (e.pageX - ActiveResizerValues.original_mouse_x)
     const height = ActiveResizerValues.original_height - (e.pageY - ActiveResizerValues.original_mouse_y)
 
@@ -485,35 +370,6 @@ const SectionDropListener = (e) => {
 
   if (ActiveSection.name === '1') {
     if (ActiveWidget) {
-      // check is the same place
-
-      /*
-        let hasError = false;
-         const newItem = {
-        top: e.clientY,
-        left: e.clientX,
-        right: e.clientX + 100,
-        bottom: e.clientY + 50,
-      }
-
-        const elements = document.getElementsByClassName("resizable")
-
-        Array.prototype.forEach.call(elements, errorElement => {
-          const bounding = errorElement.getBoundingClientRect()
-          const oldPoint = {
-            top: bounding.top,
-            left: bounding.left,
-            right: bounding.left + errorElement.clientWidth,
-            bottom: bounding.top + errorElement.clientHeight
-          }
-
-          if (intersectRect(oldPoint, newItem)) {
-            hasError = true
-          }
-        });
-        if (hasError) return
-
-       */
       ActiveSection.sections[0].push({
         id: Math.random(),
         color: ActiveWidget.color,
@@ -558,46 +414,6 @@ const SectionDropListener = (e) => {
 
       buildSections()
     } else {
-      // check is the same place
-      /*
-        let hasError = false;
-        const elements = document.getElementsByClassName("resizable")
-        const newPointLeft = e.clientX - ActiveSingleDrop.clickOffsetLeft
-        const newPointTop = e.clientY - ActiveSingleDrop.clickOffsetTop
-        const newPointRight = e.clientX - ActiveSingleDrop.clickOffsetLeft + ActiveSingleDrop.width
-        const newPointBottom = e.clientY - ActiveSingleDrop.clickOffsetTop + ActiveSingleDrop.height
-
-        // check outside
-        //if (newPointLeft < 0) return;
-        //if (newPointTop < 60) return;
-        //if (newPointRight > window.innerWidth) return;
-        //if (newPointBottom > window.innerHeight) return;
-
-        Array.prototype.forEach.call(elements, errorElement => {
-        if (errorElement.classList.contains("resizable_" + ActiveSingleDrop.id)) return
-
-        const bounding = errorElement.getBoundingClientRect()
-        const newPoint = {
-          top: newPointTop,
-          left: newPointLeft,
-          right: newPointRight,
-          bottom: newPointBottom
-        }
-        const oldPoint = {
-          top: bounding.top,
-          left: bounding.left,
-          right: bounding.left + errorElement.clientWidth,
-          bottom: bounding.top + errorElement.clientHeight
-        }
-
-        if (intersectRect(oldPoint, newPoint)) {
-          hasError = true
-        }
-      });
-
-      if (hasError) return
-       */
-
       const activeItem = ActiveSection.sections[0].find(function (el) {
         return el.id === ActiveSingleDrop.id
       });
